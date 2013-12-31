@@ -8,11 +8,13 @@ bytesOut = []
 pointsIn = []
 pointsOut = []
 
+@points = 15
+
 bytesIn <<  getKafkaStatus("BytesIn")
 bytesOut << getKafkaStatus("BytesOut")
 
 #messagesIn = []
-(1..20).each do |i|
+(1..@points).each do |i|
   bytesIn << getKafkaStatus("BytesIn")
   bytesOut << getKafkaStatus("BytesOut")
 
@@ -33,8 +35,8 @@ SCHEDULER.every '3s' do
   bytesIn << getKafkaStatus("BytesIn")
   bytesOut << getKafkaStatus("BytesOut")
 
-  pointsIn << {x: last_x, y: bytesIn[20] - bytesIn[19] }
-  pointsOut << {x: last_x, y: bytesOut[20] - bytesOut[19] }
+  pointsIn << {x: last_x, y: bytesIn[@points] - bytesIn[@points - 1] }
+  pointsOut << {x: last_x, y: bytesOut[@points] - bytesOut[@points - 1] }
 
   send_event('bytesIn', points: pointsIn)
   send_event('bytesOut', points: pointsOut)
