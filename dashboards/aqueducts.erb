@@ -1,0 +1,26 @@
+<% content_for :title do %>aqueducts dashboard<% end %>
+<div class="gridster">
+  <ul>
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-id="products" data-view="Number" data-title="Products Count:" data-moreinfo="online" data-prefix=""></div>
+    </li>
+
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-id="services" data-view="Number" data-title="Services Count:" data-moreinfo="online" data-prefix=""></div>
+    </li>
+
+    <li data-row="1" data-col="4" data-sizex="1" data-sizey="1">
+      <div data-view="Clock"></div>
+      <i class="icon-time icon-background"></i>
+    </li>
+
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="bytesIn" data-view="Graph" data-title="kafka In in 3s" style="background-color:#ff9618"></div>
+    </li>
+
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="bytesOut" data-view="Graph" data-title="kafka Out in 3s" style="background-color:#ff9618"></div>
+    </li>
+
+  </ul>
+</div>
