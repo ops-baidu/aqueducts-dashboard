@@ -51,7 +51,7 @@ SCHEDULER.every "#{@period}s" do
 
   pointsIn << {x: last_x, y: (bytesIn[@numOfPoints] - bytesIn[@numOfPoints - 1]) / @period }
   pointsOut << {x: last_x, y: (bytesOut[@numOfPoints] - bytesOut[@numOfPoints - 1]) / @period }
-  pointsOut << {x: last_x, y: (messagesIn[@numOfPoints] - messagesIn[@numOfPoints - 1]) / @period }
+  pointsMessagesIn << {x: last_x, y: (messagesIn[@numOfPoints] - messagesIn[@numOfPoints - 1]) / @period }
 
   send_event('bytesIn', points: pointsIn)
   send_event('bytesOut', points: pointsOut)
