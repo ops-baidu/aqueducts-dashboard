@@ -34,7 +34,7 @@ end
 
 last_x = pointsIn.last[:x]
 
-SCHEDULER.every "#{@period}s" do
+SCHEDULER.every "#{@period}s", allow_overlapping: false do
   bytesIn.shift
   bytesOut.shift
   messagesIn.shift
