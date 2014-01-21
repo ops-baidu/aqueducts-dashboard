@@ -36,7 +36,7 @@ last_x = points.last[:x]
 current_products = 0
 current_services = 0
 
-SCHEDULER.every '5s' do
+SCHEDULER.every '5s', allow_overlapping: false do
   points.shift
   last_x += 1
   status = getCurrentStatus()
