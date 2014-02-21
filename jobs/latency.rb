@@ -2,10 +2,12 @@ require 'open-uri'
 require "json"
 
 def latency
-  url = "http://api.aqueducts.baidu.com/v1/events?product=im&service=router&item=page_view&calculation=count&from=-5s&to=now"
+  url = "http://api.aqueducts.baidu.com/v1/events?product=sf&service=vsarch&item=page_view&calculation=count&from=-5s&to=now&detail=true"
   result = JSON.parse(open(url).read)
   last_point = result.first
-  latency = Time.parse(last_point["insert_time"]) - Time.parse(last_point["event_time"])
+  insert_time = last_point["insert_time"].to_i / 1000
+  event_time = last_point["event_time"].to_i / 1000
+  latency = insert_time - event_time
 end
 
 points = []
