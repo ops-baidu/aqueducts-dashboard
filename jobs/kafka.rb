@@ -1,8 +1,5 @@
 @numOfPoints = 15
-#@kafkaHost = "dbl-aqueducts-kafka01.dbl01.baidu.com"
-#@kafkaHosts = ["cq01-aqueducts-kafka00.cq01.baidu.com","cq01-aqueducts-kafka01.cq01.baidu.com", "cq01-aqueducts-kafka03.cq01.baidu.com", "cq01-aqueducts-kafka00.cq04.baidu.com","cq01-aqueducts-kafka05.cq01.baidu.com", "cq01-aqueducts-kafka06.cq01.baidu.com"]
-#@kafkaHost = "cq01-aqueducts-kafka00.cq01.baidu.com"
-@kafkaHosts = ['cq01-aqueducts-kafka00.cq01', 'cq01-aqueducts-kafka02.cq01', 'cq01-aqueducts-kafka03.cq01', 'cq01-aqueducts-kafka04.cq01', 'cq01-aqueducts-kafka05.cq01', 'cq01-aqueducts-kafka06.cq01', 'db-aqueducts-kafka08.db01', 'db-aqueducts-kafka07.db01', 'cq01-aqueducts-kafka01.cq01'] 
+#@kafkaHosts = ['cq01-aqueducts-kafka00.cq01', 'cq01-aqueducts-kafka02.cq01', 'cq01-aqueducts-kafka03.cq01', 'cq01-aqueducts-kafka04.cq01', 'cq01-aqueducts-kafka05.cq01', 'cq01-aqueducts-kafka06.cq01', 'db-aqueducts-kafka08.db01', 'db-aqueducts-kafka07.db01', 'cq01-aqueducts-kafka01.cq01']
 @kafkaPort = "8888"
 @jmxcmdPath = "/home/work/bin/jmxcmd.jar"
 @jmxBean = "kafka:type=kafka.BrokerAllTopicStat"
@@ -10,10 +7,23 @@
 
 @backup = 2 # kafka backup number
 
-def getKafkaStatus(bean, kafkaHosts)
-#  value = `java -jar #{@jmxcmdPath} - #{kafkaHosts}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' Count 2>&1`
-#  return value.split(":").last.to_i
+def get_brokers_from_zk
+  require 'zookeeper'
 
+  brokers = []
+  zk = Zookeeper.new("buffer.aqueducts.baidu.com:2181")
+  zk.get_children(:path => "/brokers/ids")[:children].each do |ids|
+    broker_meta = zk.get(:path => "/brokers/ids/#{ids}")[:data]
+    broker_meta_in_json = JSON.parse(broker_meta)
+    brokers << broker_meta_in_json["host"] + ":" + broker_meta_in_json["port"].to_s
+  end
+  zk.close
+  return brokers
+end
+
+@kafkaHosts = get_brokers_from_zk
+
+def getKafkaStatus(bean, kafkaHosts)
   total = 0
   kafkaHosts.each do |host|
     value = `java -jar #{@jmxcmdPath} - #{host}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' Count 2>&1`
@@ -41,12 +51,20 @@ messagesIn << getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHosts)
 
   pointsIn << { x: i, y: (bytesIn[i] - bytesIn[i - 1] ) / @period }
   pointsOut << { x: i, y: (bytesOut[i] - bytesOut[i - 1]) / @period / @backup }
-  pointsMessagesIn << { x: i, y: (messagesIn[i] - messagesIn[i - 1]) / @period /@backup }
+  pointsMessagesIn << { x: i, y: (messagesIn[i] - messagesIn[i - 1]) / @period / @backup }
 end
 
 last_x = pointsIn.last[:x]
 
+flag = 0
+
 SCHEDULER.every "#{@period}s", allow_overlapping: false do
+  flag+=1
+  if 100 == flag
+    flag = 0
+    @kafkaHosts = get_brokers_from_zk
+  end
+
   bytesIn.shift
   bytesOut.shift
   messagesIn.shift
