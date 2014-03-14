@@ -1,1 +1,1 @@
-class Dashing.ServerStatus extends Dashing.Widget
+class Dashing.ServiceStatus extends Dashing.Widget

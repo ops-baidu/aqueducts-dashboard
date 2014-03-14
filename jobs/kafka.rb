@@ -11,11 +11,11 @@ def get_brokers_from_zk
   require 'zookeeper'
 
   brokers = []
-  zk = Zookeeper.new("buffer.aqueducts.baidu.com:2181")
+  zk = Zookeeper.new("10.36.4.185:2181")
   zk.get_children(:path => "/brokers/ids")[:children].each do |ids|
     broker_meta = zk.get(:path => "/brokers/ids/#{ids}")[:data]
     broker_meta_in_json = JSON.parse(broker_meta)
-    brokers << broker_meta_in_json["host"] + ":" + broker_meta_in_json["port"].to_s
+    brokers << broker_meta_in_json["host"]
   end
   zk.close
   return brokers

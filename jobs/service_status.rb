@@ -77,9 +77,14 @@ SCHEDULER.every '300s', :first_in => 0 do |job|
         arrow = "icon-warning-sign"
         color = "red"
     end
-    statuses.push({label: "search_service", value: result, arrow: arrow, color: color})
+    statuses.push({label: "search", arrow: arrow, color: color})
+
+    arrow = "icon-warning-sign"
+    color = "red"
+
+#    statuses.push({label: "test", arrow: arrow, color: color})
 
 
     # print statuses to dashboard
-    send_event('server_status', {items: statuses})
+    send_event('service_status', {items: statuses})
 end
