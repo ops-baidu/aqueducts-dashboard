@@ -1,3 +1,31 @@
+def check_elasticsearch
+  begin
+    require 'rest-client'
+    response = RestClient.get "http://10.36.4.246:8200/_cluster/health"
+    ret = JSON.parse(response)
+    return ret['status']
+  rescue Exception
+    return "red"
+  end
+    return "red"
+end
+
+def check_zookeeper
+  begin
+    zookeeper_hosts = `get_instance_by_service zookeeper.aqueducts.all`.split
+
+    alive = 0
+    zookeeper_hosts.each { |host|
+    	alive += ('imok' == `echo ruok | nc #{host} 2181`) ? 1 : 0
+    }
+    
+    return true if alive == zookeeper_hosts.count
+  rescue Exception
+    return false
+  end
+  return false
+end
+
 def check_search
   begin
     require 'rest-client'
@@ -13,6 +41,25 @@ end
 SCHEDULER.every '20s', :first_in => 0 do |job|
 
     statuses = Array.new
+    
+   # elasticsearch service status
+   color = check_elasticsearch                                                                                                                                     
+   if color == "red"                                                                                                                                               
+     arrow = "icon-warning-sign icon-2x"                                                                                                                           
+   else                                                                                                                                                            
+     arrow = "icon-ok-sign icon-2x"                                                                                                                                
+   end                                                                                                                                                             
+   statuses.push({label: "elasticsearch", arrow: arrow, color: color})
+
+    # zookeeper service status
+    if check_zookeeper
+        arrow = "icon-ok-sign icon-2x"
+        color = "green"
+    else
+        arrow = "icon-warning-sign icon-2x"
+        color = "red"
+    end
+    statuses.push({label: "zookeeper", arrow: arrow, color: color})
 
     # search service usable
     if check_search
