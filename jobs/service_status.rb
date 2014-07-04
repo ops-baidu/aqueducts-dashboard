@@ -18,7 +18,6 @@ def check_zookeeper
     zookeeper_hosts.each { |host|
     	alive += ('imok' == `echo ruok | nc #{host} 2181`) ? 1 : 0
     }
-
     return true if alive == zookeeper_hosts.count
   rescue Exception
     return false
