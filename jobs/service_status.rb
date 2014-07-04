@@ -27,13 +27,11 @@ end
 
 def check_search
   begin
-    start = time.now
+    start = Time.now
     require 'rest-client'
-    #response = RestClient.get "http://api.aqueducts.baidu.com/v1/ping"
     response = RestClient.get "http://api.aqueducts.baidu.com/v1/events?product=im&service=router&item=page_view&calculation=count&from=-1m&to=now"
     ret = JSON.parse(response)
-    #return true if ret['ping'] == "pong"
-    if ret.size > 0 && (time.now - start) < 1
+    if ret.size > 0 && (Time.now - start) < 1
       return true
     end
   rescue Exception
