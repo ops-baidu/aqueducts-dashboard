@@ -31,7 +31,7 @@ def check_search
     require 'rest-client'
     response = RestClient.get "http://api.aqueducts.baidu.com/v1/events?product=im&service=router&item=page_view&calculation=count&from=-1m&to=now"
     ret = JSON.parse(response)
-    if ret.size > 0 && (Time.now - start) < 1
+    if ret.size > 0 && (Time.now - start) < 0.5
       return true
     end
   rescue Exception
@@ -46,7 +46,7 @@ SCHEDULER.every '20s', :first_in => 0 do |job|
 
    # elasticsearch service status
    color = check_elasticsearch
-   if color == "red"
+   if color != "green"
      arrow = "icon-warning-sign icon-2x"
    else
      arrow = "icon-ok-sign icon-2x"
