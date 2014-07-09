@@ -2,32 +2,31 @@
 <div class="gridster">
   <ul>
     <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
-      <div data-id="products" data-view="Number" data-title="Products Count:" data-moreinfo="online" data-prefix=""></div>
-    </li>
-
-    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
-      <div data-view="Clock"></div>
-      <i class="icon-time icon-background"></i>
+      <div data-id="products" data-view="Number" data-title="Products:" data-moreinfo="online" data-prefix="" style="background-color:#96B232"></div>
     </li>
 
     <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
-      <div data-id="services" data-view="Number" data-title="Services Count:" data-moreinfo="online" data-prefix=""></div>
+      <div data-id="service_status" data-view="ServiceStatus" data-title="Service Status" data-moreinfo="service usability" style="background-color:#4EB3B9"></div>
+    </li>
+
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-id="latency" data-view="Graph" data-title="Delay" data-moreinfo="include transportion time" style="background-color:#065FB9"></div>
+    </li>
+
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-id="services" data-view="Number" data-title="Services:" data-moreinfo="online" data-prefix="" style="background-color:#96B232"></div>
     </li>
 
     <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
-      <div data-id="bytesIn" data-view="Graph" data-title="kafka In per Second" style="background-color:#009618"></div>
+      <div data-id="bytesIn" data-view="Graph" data-title="kafka In" data-moreinfo="Bytes per second" style="background-color:#A05000"></div>
     </li>
 
     <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
-      <div data-id="bytesOut" data-view="Graph" data-title="kafka Out per Second" style="background-color:#ff9618"></div>
+      <div data-id="bytesOut" data-view="Graph" data-title="kafka Out" data-moreinfo="Bytes per second" style="background-color:#4C4C4C"></div>
     </li>
 
-    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
-      <div data-id="messagesIn" data-view="Graph" data-title="kafka Messages In per Second" style="background-color:#4d4db3"></div>
-    </li>
-
-    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
-      <div data-id="latency" data-view="Graph" data-title="Delay seconds from Event Trigger to Insert" style="background-color:black"></div>
+    <li data-row="1" data-col="1" data-sizex="4" data-sizey="1">
+      <div data-id="messagesIn" data-view="Graph" data-title="kafka Messages In" data-moreinfo="Messages per second" style="background-color:#036803"></div>
     </li>
 
   </ul>
