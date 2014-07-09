@@ -16,11 +16,7 @@ points = []
 end
 last_x = points.last[:x]
 
-<<<<<<< HEAD
-SCHEDULER.every '20s' do
-=======
 SCHEDULER.every '3s' do
->>>>>>> f4e7eeafddfa9223c79944bf2df6baf806289232
   points.shift
   last_x += 1
   points << { x: last_x, y: latency }
