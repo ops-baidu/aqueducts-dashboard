@@ -1,17 +1,19 @@
-@numOfPoints = 15
-#@kafkaHosts = ['cq01-aqueducts-kafka00.cq01', 'cq01-aqueducts-kafka02.cq01', 'cq01-aqueducts-kafka03.cq01', 'cq01-aqueducts-kafka04.cq01', 'cq01-aqueducts-kafka05.cq01', 'cq01-aqueducts-kafka06.cq01', 'db-aqueducts-kafka08.db01', 'db-aqueducts-kafka07.db01', 'cq01-aqueducts-kafka01.cq01']
+@numOfPoints = 60
 @kafkaPort = "8888"
 @jmxcmdPath = "/home/work/bin/jmxcmd.jar"
 @jmxBean = "kafka:type=kafka.BrokerAllTopicStat"
+@zookeeperHuaBeiVIP = "10.36.4.185:2181"
+@zookeeperHuaDongVIP = "10.202.6.13:2181"
 @period = 5
 
 @backup = 2 # kafka backup number
 
-def get_brokers_from_zk
+def get_brokers_from_zk(url)
   require 'zookeeper'
 
   brokers = []
-  zk = Zookeeper.new("10.36.4.185:2181")
+  #zk = Zookeeper.new("10.36.4.185:2181")
+  zk = Zookeeper.new(url)
   zk.get_children(:path => "/brokers/ids")[:children].each do |ids|
     broker_meta = zk.get(:path => "/brokers/ids/#{ids}")[:data]
     broker_meta_in_json = JSON.parse(broker_meta)
@@ -21,74 +23,91 @@ def get_brokers_from_zk
   return brokers
 end
 
-@kafkaHosts = get_brokers_from_zk
-
 def getKafkaStatus(bean, kafkaHosts)
   total = 0
   kafkaHosts.each do |host|
-    value = `java -jar #{@jmxcmdPath} - #{host}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' Count 2>&1`
-    total += value.split(": ").last.to_i;
+    value = `java -jar #{@jmxcmdPath} - #{host}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' MeanRate 2>&1`
+    total += value.split(": ").last.to_f;
   end
-  return total
+  return total.to_i
 end
 
-bytesIn = []
-bytesOut = []
-messagesIn = []
+@kafkaHostsHuaBei = get_brokers_from_zk @zookeeperHuaBeiVIP
+@kafkaHostsHuaDong = get_brokers_from_zk @zookeeperHuaDongVIP
 
-pointsIn = []
-pointsOut = []
-pointsMessagesIn = []
+pointsInHuaBei = []
+pointsOutHuaBei = []
+pointsMessagesInHuaBei = []
 
-bytesIn << getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHosts)
-bytesOut << getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHosts)
-messagesIn << getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHosts)
+pointsInHuaDong = []
+pointsOutHuaDong = []
+pointsMessagesInHuaDong = []
+
+pointsInTotal = []
+pointsOutTotal = []
+pointsMessagesInTotal = []
 
 (1..@numOfPoints).each do |i|
-  bytesIn << getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHosts)
-  bytesOut << getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHosts)
-  messagesIn << getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHosts)
+  pointsInHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei) }
+  pointsOutHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei) }
+  pointsMessagesInHuaBei << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei) }
 
-  pointsIn << { x: i, y: (bytesIn[i] - bytesIn[i - 1] ) / @period }
-  pointsOut << { x: i, y: (bytesOut[i] - bytesOut[i - 1]) / @period / @backup }
-  pointsMessagesIn << { x: i, y: (messagesIn[i] - messagesIn[i - 1]) / @period / @backup }
+  pointsInHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong) }
+  pointsOutHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong) }
+  pointsMessagesInHuaDong << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong) }
+
+  pointsInTotal << { x: i, y:  pointsInHuaBei.last.y + pointsInHuaDong.last.y}
+  pointsOutTotal << { x: i, y:  pointsOutHuaBei.last.y + pointsOutHuaDong.last.y}
+  pointsMessagesInTotal << { x: i, y: pointsMessagesInHuaBei.last.y + pointsMessagesInHuaDong.last.y}
 end
 
-last_x = pointsIn.last[:x]
+last_x = pointsInHuaBei.last[:x]
 
 flag = 0
 
 SCHEDULER.every "#{@period}s", allow_overlapping: false do
-  flag+=1
+  flag += 1
   if 100 == flag
     flag = 0
-    @kafkaHosts = get_brokers_from_zk
+    @kafkaHostsHuaBei = get_brokers_from_zk @zookeeperHuaBeiVIP
+    @kafkaHostsHuaDong = get_brokers_from_zk @zookeeperHuaDongVIP
   end
 
-  bytesIn.shift
-  bytesOut.shift
-  messagesIn.shift
+  pointsInHuaBei.shift
+  pointsOutHuaBei.shift
+  pointsMessagesInHuaBei.shift
 
-  pointsIn.shift
-  pointsOut.shift
-  pointsMessagesIn.shift
+  pointsInHuaDong.shift
+  pointsOutHuaDong.shift
+  pointsMessagesInHuaDong.shift
+
+  pointsInTotal.shift
+  pointsOutTotal.shift
+  pointsMessagesInTotal.shift
 
   last_x += 1
 
-  bytesIn << getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHosts)
-  bytesOut << getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHosts)
-  messagesIn << getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHosts)
+  pointsInHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei) }
+  pointsOutHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei) }
+  pointsMessagesInHuaBei << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei) }
 
-  pointsIn << {x: last_x, y: (bytesIn[@numOfPoints] - bytesIn[@numOfPoints - 1]) / @period }
-  pointsOut << {x: last_x, y: (bytesOut[@numOfPoints] - bytesOut[@numOfPoints - 1]) / @period / @backup }
-  pointsMessagesIn << {x: last_x, y: (messagesIn[@numOfPoints] - messagesIn[@numOfPoints - 1]) / @period / @backup }
+  pointsInHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong) }
+  pointsOutHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong) }
+  pointsMessagesInHuaDong << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong) }
 
-  send_event('bytesIn', points: pointsIn)
-  send_event('bytesOut', points: pointsOut)
-  send_event('messagesIn', points: pointsMessagesIn)
+  pointsInTotal << { x: i, y:  pointsInHuaBei.last.y + pointsInHuaDong.last.y}
+  pointsOutTotal << { x: i, y:  pointsOutHuaBei.last.y + pointsOutHuaDong.last.y}
+  pointsMessagesInTotal << { x: i, y: pointsMessagesInHuaBei.last.y + pointsMessagesInHuaDong.last.y}
+
+  send_event('bytesInHuaBei', points: pointsInHuaBei)
+  send_event('bytesOutHuaBei', points: pointsOutHuaBei)
+  send_event('messagesInHuaBei', points: pointsMessagesInHuaBei)
+
+  send_event('bytesInHuaDong', points: pointsInHuaDong)
+  send_event('bytesOutHuaDong', points: pointsOutHuaDong)
+  send_event('messagesInHuaDong', points: pointsMessagesInHuaDong)
+
+  send_event('bytesInTotal', points: pointsInTotal)
+  send_event('bytesOutTotal', points: pointsOutTotal)
+  send_event('messagesInTotal', points: pointsMessagesInTotal)
 end
-
-
-# java -jar ~/nfs/jmxcmd.jar - cq01-aqueducts-kafka00.cq01:8888 '"kafka.server":name="AllTopicsBytesInPerSec",type="BrokerTopicMetrics"' OneMinuteRate
-# java -jar ~/nfs/jmxcmd.jar - cq01-aqueducts-kafka00.cq01:8888 '"kafka.server":name="AllTopicsBytesOutPerSec",type="BrokerTopicMetrics"' OneMinuteRate
-# java -jar ~/nfs/jmxcmd.jar - cq01-aqueducts-kafka00.cq01:8888 '"kafka.server":name="AllTopicsMessagesInPerSec",type="BrokerTopicMetrics"' OneMinuteRate
