@@ -26,7 +26,7 @@ end
 def getKafkaStatus(bean, kafkaHosts)
   total = 0
   kafkaHosts.each do |host|
-    value = `java -jar #{@jmxcmdPath} - #{host}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' MeanRate 2>&1`
+    value = `java -jar #{@jmxcmdPath} - #{host}:#{@kafkaPort} '"kafka.server":name="#{bean}",type="BrokerTopicMetrics"' Count 2>&1`
     total += value.split(": ").last.to_f;
   end
   return total.to_i
@@ -35,9 +35,16 @@ end
 @kafkaHostsHuaBei = get_brokers_from_zk @zookeeperHuaBeiVIP
 @kafkaHostsHuaDong = get_brokers_from_zk @zookeeperHuaDongVIP
 
+lastInHuaBei = 0
+lastOutHuaBei = 0
+lastMessagsInHuaBei = 0
 pointsInHuaBei = []
 pointsOutHuaBei = []
 pointsMessagesInHuaBei = []
+
+lastInHuaDong = 0
+lastOutHuaDong = 0
+lastMessagsInHuaDong = 0
 
 pointsInHuaDong = []
 pointsOutHuaDong = []
@@ -47,25 +54,14 @@ pointsInTotal = []
 pointsOutTotal = []
 pointsMessagesInTotal = []
 
-(1..@numOfPoints).each do |i|
-  pointsInHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei) }
-  pointsOutHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei) }
-  pointsMessagesInHuaBei << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei) }
-
-  pointsInHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong) }
-  pointsOutHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong) }
-  pointsMessagesInHuaDong << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong) }
-
-  pointsInTotal << { x: i, y:  pointsInHuaBei.last.y + pointsInHuaDong.last.y}
-  pointsOutTotal << { x: i, y:  pointsOutHuaBei.last.y + pointsOutHuaDong.last.y}
-  pointsMessagesInTotal << { x: i, y: pointsMessagesInHuaBei.last.y + pointsMessagesInHuaDong.last.y}
-end
-
-last_x = pointsInHuaBei.last[:x]
-
+last_x = 0
 flag = 0
+last_timestamp = time.now() - 3
 
 SCHEDULER.every "#{@period}s", allow_overlapping: false do
+  interval = time.now() - last_timestamp
+  last_timestamp = time.now()
+
   flag += 1
   if 100 == flag
     flag = 0
@@ -87,17 +83,33 @@ SCHEDULER.every "#{@period}s", allow_overlapping: false do
 
   last_x += 1
 
-  pointsInHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei) }
-  pointsOutHuaBei << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei) }
-  pointsMessagesInHuaBei << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei) }
+  tmp = getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei)
+  pointsInHuaBei << { x: last_x, y: (tmp - lastInHuaBei) / interval }
+  lastInHuaBei = tmp
 
-  pointsInHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong) }
-  pointsOutHuaDong << { x: i, y: getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong) }
-  pointsMessagesInHuaDong << { x: i, y: getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong) }
+  tmp = getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei)
+  pointsOutHuaBei << { x: last_x, y: (tmp - lastOutHuaBei) / interval }
+  lastOutHuaBei = tmp
 
-  pointsInTotal << { x: i, y:  pointsInHuaBei.last.y + pointsInHuaDong.last.y}
-  pointsOutTotal << { x: i, y:  pointsOutHuaBei.last.y + pointsOutHuaDong.last.y}
-  pointsMessagesInTotal << { x: i, y: pointsMessagesInHuaBei.last.y + pointsMessagesInHuaDong.last.y}
+  tmp = getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei)
+  pointsMessagesInHuaBei << { x: last_x, y: (tmp - lastMessagesInHuaBei) / interval }
+  lastMessagsInHuaBei = tmp
+
+  tmp = getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong)
+  pointsInHuaDong << { x: last_x, y: (tmp - lastInHuaDong) / interval }
+  lastInHuaDong = tmp
+
+  tmp = getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong)
+  pointsOutHuaDong << { x: last_x, y: (tmp - lastOutHuaDong) / interval }
+  lastOutHuaDong = tmp
+
+  tmp = getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong)
+  pointsMessagesInHuaDong << { x: last_x, y: (tmp - lastMessagesInHuaDong) / interval }
+  lastMessagsInHuaDong = tmp
+
+  pointsInTotal << { x: last_x, y:  pointsInHuaBei.last[:y] + pointsInHuaDong.last[:y]}
+  pointsOutTotal << { x: last_x, y:  pointsOutHuaBei.last[:y] + pointsOutHuaDong.last[:y]}
+  pointsMessagesInTotal << { x: last_x, y: pointsMessagesInHuaBei.last[:y] + pointsMessagesInHuaDong.last[:y]}
 
   send_event('bytesInHuaBei', points: pointsInHuaBei)
   send_event('bytesOutHuaBei', points: pointsOutHuaBei)
