@@ -37,14 +37,14 @@ end
 
 lastInHuaBei = 0
 lastOutHuaBei = 0
-lastMessagsInHuaBei = 0
+lastMessagesInHuaBei = 0
 pointsInHuaBei = []
 pointsOutHuaBei = []
 pointsMessagesInHuaBei = []
 
 lastInHuaDong = 0
 lastOutHuaDong = 0
-lastMessagsInHuaDong = 0
+lastMessagesInHuaDong = 0
 
 pointsInHuaDong = []
 pointsOutHuaDong = []
@@ -54,13 +54,30 @@ pointsInTotal = []
 pointsOutTotal = []
 pointsMessagesInTotal = []
 
-last_x = 0
+(1..@numOfPoints).each do |i|
+  pointsInHuaBei << { x: i, y: 0 }
+  pointsOutHuaBei << { x: i, y: 0 } 
+  pointsMessagesInHuaBei <<  { x: i, y: 0 }
+  
+  pointsInHuaDong <<  { x: i, y: 0 }
+  pointsOutHuaDong <<  { x: i, y: 0 }
+  pointsMessagesInHuaDong <<  { x: i, y: 0 }
+  
+  pointsInTotal << { x: i, y: 0 }
+  pointsOutTotal << { x: i, y: 0 }
+  pointsMessagesInTotal << { x: i, y: 0 }
+end
+
+
+last_x = pointsMessagesInTotal.last[:x]
+
 flag = 0
-last_timestamp = time.now() - 3
+require 'time'
+last_timestamp = Time.now() - 3
 
 SCHEDULER.every "#{@period}s", allow_overlapping: false do
-  interval = time.now() - last_timestamp
-  last_timestamp = time.now()
+  interval = Time.now() - last_timestamp
+  last_timestamp = Time.now()
 
   flag += 1
   if 100 == flag
@@ -84,28 +101,30 @@ SCHEDULER.every "#{@period}s", allow_overlapping: false do
   last_x += 1
 
   tmp = getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaBei)
-  pointsInHuaBei << { x: last_x, y: (tmp - lastInHuaBei) / interval }
+  pointsInHuaBei << { x: last_x, y: ((tmp - lastInHuaBei) / interval).to_i }
   lastInHuaBei = tmp
 
   tmp = getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaBei)
-  pointsOutHuaBei << { x: last_x, y: (tmp - lastOutHuaBei) / interval }
+  pointsOutHuaBei << { x: last_x, y: ((tmp - lastOutHuaBei) / interval / @backup).to_i }
   lastOutHuaBei = tmp
 
   tmp = getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaBei)
-  pointsMessagesInHuaBei << { x: last_x, y: (tmp - lastMessagesInHuaBei) / interval }
-  lastMessagsInHuaBei = tmp
+  #pointsMessagesInHuaBei << { x: last_x, y: ((tmp - lastMessagesInHuaBei) / interval / @backup).to_i }
+  pointsMessagesInHuaBei << { x: last_x, y: ((tmp - lastMessagesInHuaBei) / interval).to_i }
+  lastMessagesInHuaBei = tmp
 
   tmp = getKafkaStatus("AllTopicsBytesInPerSec", @kafkaHostsHuaDong)
-  pointsInHuaDong << { x: last_x, y: (tmp - lastInHuaDong) / interval }
+  pointsInHuaDong << { x: last_x, y: ((tmp - lastInHuaDong) / interval).to_i }
   lastInHuaDong = tmp
 
   tmp = getKafkaStatus("AllTopicsBytesOutPerSec", @kafkaHostsHuaDong)
-  pointsOutHuaDong << { x: last_x, y: (tmp - lastOutHuaDong) / interval }
+  pointsOutHuaDong << { x: last_x, y: ((tmp - lastOutHuaDong) / interval / @backup).to_i }
   lastOutHuaDong = tmp
 
   tmp = getKafkaStatus("AllTopicsMessagesInPerSec", @kafkaHostsHuaDong)
-  pointsMessagesInHuaDong << { x: last_x, y: (tmp - lastMessagesInHuaDong) / interval }
-  lastMessagsInHuaDong = tmp
+  #pointsMessagesInHuaDong << { x: last_x, y: ((tmp - lastMessagesInHuaDong) / interval / @backup).to_i }
+  pointsMessagesInHuaDong << { x: last_x, y: ((tmp - lastMessagesInHuaDong) / interval).to_i }
+  lastMessagesInHuaDong = tmp
 
   pointsInTotal << { x: last_x, y:  pointsInHuaBei.last[:y] + pointsInHuaDong.last[:y]}
   pointsOutTotal << { x: last_x, y:  pointsOutHuaBei.last[:y] + pointsOutHuaDong.last[:y]}
